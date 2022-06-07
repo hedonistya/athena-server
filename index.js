@@ -13,22 +13,22 @@ app.use(express.json({
   limit: '500mb'
 }))
 
-app.ws('/', (ws, req) => {
-  ws.on('message', (msg) => {
-    msg = JSON.parse(msg);
+app.ws('/', (ws, request) => {
+  ws.on('message', (message) => {
+    message = JSON.parse(message);
 
-    switch (msg.method) {
+    switch (message.method) {
       case 'connection':
-        connectionHandler(ws, msg);
+        getConnection(ws, message);
         break;
       case 'draw':
-        broadcastConnection(ws, msg);
+        getAction(ws, message);
         break;
       case 'clear':
-        broadcastConnection(ws, msg);
+        getAction(ws, message);
         break;
       case 'message':
-        broadcastConnection(ws, msg);
+        getAction(ws, message);
         break;
       default:
         break;
@@ -36,67 +36,76 @@ app.ws('/', (ws, req) => {
   })
 })
 
-const connectionHandler = (ws, msg) => {
-  ws.id = msg.id;
-  broadcastConnection(ws, msg);
+const getConnection = (ws, message) => {
+  ws.id = message.id;
+  getAction(ws, message);
 };
 
-const broadcastConnection = (ws, msg) => {
+const getAction = (ws, message) => {
   aWss.clients.forEach(client => {
-    if (client.id === msg.id) {
-      client.send(JSON.stringify(msg));
+    if (client.id === message.id) {
+      client.send(JSON.stringify(message));
     }
   })
 };
 
-app.post('/image', (req, res) => {
+app.post('/image', (request, response) => {
   try {
-    const data = req.body.img.replace(`data:image/png;base64,`, '');
-    fs.writeFileSync(path.resolve(__dirname, 'images', `${req.query.id}.png`), data, 'base64');
-    return res.status(200).json({
-      message: "Загружено"
+    const result = request.body.img.replace(`data:image/png;base64,`, '');
+    fs.writeFileSync(path.resolve(__dirname, 'images', `${request.query.id}.png`), result, 'base64');
+
+    return response.status(200).json({
+      message: "Success"
     })
-  } catch (e) {
-    console.log(e);
-    return res.status(500).json('error')
+  } catch (error) {
+    console.log(error);
+
+    return response.status(500).json('error')
   }
 });
 
-app.get('/image', (req, res) => {
+app.get('/image', (request, response) => {
   try {
-    const file = fs.readFileSync(path.resolve(__dirname, 'images', `${req.query.id}.png`));
-    const data = `data:image/png;base64,` + file.toString('base64');
-    res.json(data);
-  } catch (e) {
-    console.log(e);
-    return res.status(500).json('error');
+    const data = fs.readFileSync(path.resolve(__dirname, 'images', `${request.query.id}.png`));
+    const result = `data:image/png;base64,` + data.toString('base64');
+
+    response.json(result);
+  } catch (error) {
+    console.log(error);
+
+    return response.status(500).json('error');
   }
 });
 
-app.post('/users', (req, res) => {
+app.post('/users', (request, response) => {
+  const data = {
+    owner: request.body.owner
+  };
+
   try {
-    const data = {
-      owner: req.body.owner
-    };
-    const json = JSON.stringify(data);
-    fs.writeFileSync(path.resolve(__dirname, 'users', `${req.query.id}.json`), json, 'utf8');
-    return res.status(200).json({
-      message: "Загружено"
+    const result = JSON.stringify(data);
+    fs.writeFileSync(path.resolve(__dirname, 'users', `${request.query.id}.json`), result, 'utf8');
+
+    return response.status(200).json({
+      message: "Success"
     });
-  } catch (e) {
-    console.log(e);
-    return res.status(500).json('error')
+  } catch (error) {
+    console.log(error);
+
+    return response.status(500).json('error')
   }
 });
 
-app.get('/users', (req, res) => {
+app.get('/users', (request, response) => {
   try {
-    const rawdata = fs.readFileSync(path.resolve(__dirname, 'users', `${req.query.id}.json`));
-    const data = JSON.parse(rawdata);
-    res.json(data);
-  } catch (e) {
-    console.log(e);
-    return res.status(500).json('error');
+    const data = fs.readFileSync(path.resolve(__dirname, 'users', `${request.query.id}.json`));
+    const result = JSON.parse(data);
+
+    response.json(result);
+  } catch (error) {
+    console.log(error);
+
+    return response.status(500).json('error');
   }
 });
 
